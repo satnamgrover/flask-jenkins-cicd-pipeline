@@ -17,7 +17,7 @@ pipeline {
                 python3 -m venv venv
                 . venv/bin/activate
                 pip install flake8
-                flake8 app/ tests/ --max-line-lenght=100
+                flake8 app/ tests/ --max-line-length=100
                 '''
             }
         }
