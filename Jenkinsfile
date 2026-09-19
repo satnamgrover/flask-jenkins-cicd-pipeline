@@ -33,13 +33,13 @@ pipeline {
         
         stage('build'){
             steps{
-                sh ''' docker build -t ${IMAGE_NAME}":${IMAGE_TAG} -t ${IMAGE_NAME}:latest .'''
+                sh ''' docker build -t ${IMAGE_NAME}:${IMAGE_TAG} -t ${IMAGE_NAME}:latest .'''
             }
         }
         stage('Push To DockerHub'){
             steps{
                 sh'''
-                echo DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin
+                echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin
                 docker push ${IMAGE_NAME}:${IMAGE_TAG}
                 docker push ${IMAGE_NAME}:latest
                 '''
