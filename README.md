@@ -100,4 +100,4 @@ docker run -p 5000:5000 cicd-pipeline-project
 - Add a code coverage report and upload it as a workflow artifact
 - Add Dependabot for automated dependency updates
 - Add a `staging` environment with manual approval before production deploy
->>>>>>> bd2d3e3 (Pushing code to GitHub)
+>>>>>>>
