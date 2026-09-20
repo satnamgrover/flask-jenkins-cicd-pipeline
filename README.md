@@ -22,7 +22,7 @@ store and never appear in source control or logs.
 
 ## Screenshot
 
-*(Add a screenshot of a green Jenkins pipeline run here — see checklist below)*
+![Jenkins PipeLine](Screenshots/pipeline.png)
 
 ## Tech stack
 
