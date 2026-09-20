@@ -1,102 +1,89 @@
+# Flask Task API — CI/CD Pipeline with Jenkins & Docker
 
-# flask-jenkins-cicd-pipeline
-=======
-# CI/CD Pipeline — Flask Task API
+A REST API with a fully automated CI/CD pipeline: every commit is linted,
+tested, containerized, pushed to Docker Hub, and deployed — end to end, no
+manual steps.
 
-![CI/CD Pipeline](https://github.com/YOUR_USERNAME/YOUR_REPO/actions/workflows/ci-cd.yml/badge.svg)
-
-A small Flask REST API with a full CI/CD pipeline: every push is linted,
-tested, containerized, and (on merge to `main`) pushed to Docker Hub as a
-versioned image.
-
-## Pipeline
+## Pipeline overview
 
 ```
-push/PR to main
-      |
-      v
-   [Lint]  --- flake8 style check
-      |
-      v
-   [Test]  --- pytest, 8 unit tests
-      |
-      v
-[Build & Push]  --- docker build -> push to Docker Hub (main branch only)
-                     tagged :latest and :<commit-sha>
+git push
+   │
+   ▼
+[Checkout]  →  [Lint]  →  [Test]  →  [Build]  →  [Push to Docker Hub]  →  [Deploy]
+                flake8     pytest    docker      docker push              docker run
+                            (8 tests)  build
 ```
 
-Each stage gates the next — a lint failure blocks tests, a test failure blocks
-the build. The build/push stage only runs on `main`, so pull requests get
-validated without publishing an image.
+Each stage gates the next — a lint failure stops the build before a single
+test runs; a failing test blocks the image from ever being built or pushed.
+Credentials (Docker Hub) are injected securely via Jenkins' credentials
+store and never appear in source control or logs.
+
+## Screenshot
+
+*(Add a screenshot of a green Jenkins pipeline run here — see checklist below)*
+
+## Tech stack
+
+- **App**: Python, Flask
+- **Testing**: pytest (8 unit tests covering all endpoints, including edge cases)
+- **Linting**: flake8
+- **Containerization**: Docker (multi-layer caching, non-root user, gunicorn WSGI server)
+- **CI/CD**: Jenkins (declarative pipeline, native install)
+- **Registry**: Docker Hub
 
 ## The app
 
-A minimal task API:
+A task management REST API:
 
-| Method | Route                     | Description          |
-|--------|---------------------------|-----------------------|
-| GET    | `/health`                 | Health check          |
-| GET    | `/tasks`                  | List all tasks        |
-| POST   | `/tasks`                  | Create a task         |
-| GET    | `/tasks/<id>`             | Get one task          |
-| PATCH  | `/tasks/<id>/complete`    | Mark a task done      |
-| DELETE | `/tasks/<id>`             | Delete a task         |
+| Method | Route                  | Description        |
+|--------|-------------------------|---------------------|
+| GET    | `/health`               | Health check        |
+| GET    | `/tasks`                | List all tasks      |
+| POST   | `/tasks`                | Create a task       |
+| GET    | `/tasks/<id>`           | Get one task        |
+| PATCH  | `/tasks/<id>/complete`  | Mark a task done    |
+| DELETE | `/tasks/<id>`           | Delete a task       |
 
-The app itself is intentionally simple — the point of this project is the
-pipeline around it, not the app's feature set.
+## Running it yourself
 
-## Running locally
-
+**Locally, without Docker:**
 ```bash
 pip install -r requirements-dev.txt
 python -m app.main
-# API now running on http://localhost:5000
 ```
 
-## Running tests locally
-
+**With Docker:**
 ```bash
-pip install -r requirements-dev.txt
-pytest tests/ -v
-flake8 app/ tests/ --max-line-length=100
+docker build -t task-api .
+docker run -p 5000:5000 task-api
 ```
 
-## Running with Docker
+**Full pipeline (Jenkins):**
+1. Install Jenkins natively or via Docker
+2. Install Python 3, `python3-venv`, and the Docker CLI on the Jenkins host/agent
+3. Add a Docker Hub access token as a Jenkins credential with ID `dockerhub-credentials`
+4. Create a Pipeline job pointing at this repo, using the `Jenkinsfile` from SCM
+5. Trigger a build
 
-```bash
-docker build -t cicd-pipeline-project .
-docker run -p 5000:5000 cicd-pipeline-project
-```
+## What this project demonstrates
 
-## Setting up the pipeline on your own fork
-
-1. Push this repo to your own GitHub account.
-2. Create a [Docker Hub](https://hub.docker.com) account and an
-   [access token](https://hub.docker.com/settings/security) (not your password).
-3. In your GitHub repo, go to **Settings → Secrets and variables → Actions**
-   and add two repository secrets:
-   - `DOCKERHUB_USERNAME` — your Docker Hub username
-   - `DOCKERHUB_TOKEN` — the access token from step 2
-4. Update the badge URL at the top of this README with your GitHub
-   username/repo.
-5. Push to `main` — the Actions tab will show the pipeline running, and a
-   successful run will publish `<your-dockerhub-username>/cicd-pipeline-project`
-   to Docker Hub.
-
-## What this demonstrates
-
-- Multi-stage pipeline with proper job dependencies (`needs:`)
-- Conditional deployment (build/push only on `main`, not every PR)
-- Docker layer caching in CI via GitHub Actions cache (`type=gha`)
-- Immutable image tagging by commit SHA, alongside a floating `latest` tag
-- Secrets management (no credentials in code)
-- Non-root container user, production WSGI server (gunicorn) instead of
-  Flask's dev server
+- A complete CI/CD pipeline built and debugged from scratch, including
+  standing up and configuring the CI server itself (not just writing YAML
+  for a hosted service)
+- Gated, sequential pipeline stages with fail-fast behavior
+- Secure credential handling (Jenkins credentials store, `--password-stdin`,
+  no secrets in source control)
+- Idempotent deployment (safely re-runnable without manual cleanup)
+- Container security basics: non-root user, minimal base image, production
+  WSGI server instead of a dev server
+- Real debugging experience: missing system packages, Docker-outside-of-Docker
+  permissions, native vs. containerized Jenkins tooling differences
 
 ## Possible extensions
 
-- Add a `deploy` job that SSHes into an EC2 instance and pulls the new image
-  (or deploys to Kubernetes/ECS)
-- Add a code coverage report and upload it as a workflow artifact
-- Add Dependabot for automated dependency updates
-- Add a `staging` environment with manual approval before production deploy
+- Add branch protection and run the pipeline on pull requests before merge
+- Move the app to a proper database instead of in-memory storage
+- Add a staging environment with manual approval before production deploy
+- Deploy to Kubernetes instead of a single `docker run`
